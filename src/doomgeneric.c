@@ -1,4 +1,4 @@
-//doomgeneric for cross-platform development library 'Simple DirectMedia Layer'
+// doomgeneric for cross-platform development library 'Simple DirectMedia Layer'
 
 #include "doomkeys.h"
 #include "m_argv.h"
@@ -9,32 +9,67 @@
 
 #include <stdbool.h>
 #include <emscripten.h>
-#include <emscripten/html5.h>
-#include <SDL.h>
 
-uint32_t* DG_ScreenBuffer = 0;
+uint32_t *DG_ScreenBuffer = 0;
+uint32_t start = 0;
 
 void M_FindResponseFile(void);
-void D_DoomMain (void);
+void D_DoomMain(void);
 
-void doomgeneric_Create(int argc, char **argv)
+int main()
 {
-	// save arguments
-    myargc = argc;
-    myargv = argv;
+  M_FindResponseFile();
 
-	M_FindResponseFile();
+  DG_ScreenBuffer = malloc(DOOMGENERIC_RESX * DOOMGENERIC_RESY * 4);
 
-	DG_ScreenBuffer = malloc(DOOMGENERIC_RESX * DOOMGENERIC_RESY * 4);
+  DG_Init();
 
-	DG_Init();
+  D_DoomMain();
 
-	D_DoomMain();
+  emscripten_set_main_loop(doomgeneric_Tick, 0, 1);
+
+  return 0;
 }
 
-SDL_Window* window = NULL;
-SDL_Renderer* renderer = NULL;
-SDL_Texture* texture;
+void DG_Init(void)
+{
+  start = (int)emscripten_get_now();
+}
+
+void DG_SleepMs(uint32_t ms)
+{
+  emscripten_sleep(ms);
+}
+
+void DG_DrawFrame(void)
+{
+  EM_ASM({
+    const canvas = Module.canvas;
+    const context = Module.context;
+
+    if (!Module.imageData) Module.imageData = new ImageData(
+      new Uint8ClampedArray(
+        Module.asm.memory.buffer,
+        $0,
+        canvas.width * canvas.height * 4
+      ),
+      canvas.width,
+      canvas.height
+    );
+
+    context.putImageData(Module.imageData, 0, 0);
+  }, DG_ScreenBuffer);
+}
+
+void DG_SetWindowTitle(const char *title)
+{
+  emscripten_set_window_title(title);
+}
+
+uint32_t DG_GetTicksMs()
+{
+  return (uint32_t)emscripten_get_now() - start;
+}
 
 #define KEYQUEUE_SIZE 16
 
@@ -42,88 +77,86 @@ static unsigned short s_KeyQueue[KEYQUEUE_SIZE];
 static unsigned int s_KeyQueueWriteIndex = 0;
 static unsigned int s_KeyQueueReadIndex = 0;
 
-static unsigned char convertToDoomKey(unsigned int key){
+static unsigned char convertToDoomKey(unsigned int key)
+{
+  // JS keycodes to DOOM keys
   switch (key)
     {
-    case SDLK_RETURN:
+    case 13:
       key = KEY_ENTER;
       break;
-    case SDLK_ESCAPE:
+    case 8:
       key = KEY_ESCAPE;
       break;
-    case SDLK_LEFT:
+    case 37:
       key = KEY_LEFTARROW;
       break;
-    case SDLK_RIGHT:
+    case 39:
       key = KEY_RIGHTARROW;
       break;
-    case SDLK_UP:
+    case 38:
       key = KEY_UPARROW;
       break;
-    case SDLK_DOWN:
+    case 40:
       key = KEY_DOWNARROW;
       break;
-    case SDLK_LCTRL:
-    case SDLK_RCTRL:
+    case 17:
       key = KEY_FIRE;
       break;
-    case SDLK_SPACE:
+    case 32:
       key = KEY_USE;
       break;
-    case SDLK_LSHIFT:
-    case SDLK_RSHIFT:
+    case 16:
       key = KEY_RSHIFT;
       break;
-    case SDLK_LALT:
-    case SDLK_RALT:
+    case 18:
       key = KEY_LALT;
       break;
-    case SDLK_F2:
+    case 113:
       key = KEY_F2;
       break;
-    case SDLK_F3:
+    case 114:
       key = KEY_F3;
       break;
-    case SDLK_F4:
+    case 115:
       key = KEY_F4;
       break;
-    case SDLK_F5:
+    case 116:
       key = KEY_F5;
       break;
-    case SDLK_F6:
+    case 117:
       key = KEY_F6;
       break;
-    case SDLK_F7:
+    case 118:
       key = KEY_F7;
       break;
-    case SDLK_F8:
+    case 119:
       key = KEY_F8;
       break;
-    case SDLK_F9:
+    case 120:
       key = KEY_F9;
       break;
-    case SDLK_F10:
+    case 121:
       key = KEY_F10;
       break;
-    case SDLK_F11:
+    case 122:
       key = KEY_F11;
       break;
-    case SDLK_EQUALS:
-    case SDLK_PLUS:
+    case 187:
       key = KEY_EQUALS;
       break;
-    case SDLK_MINUS:
+    case 189:
       key = KEY_MINUS;
       break;
     default:
-      key = tolower(key);
       break;
     }
 
   return key;
 }
 
-static void addKeyToQueue(int pressed, unsigned int keyCode){
+static void addKeyToQueue(int pressed, unsigned int keyCode)
+{
   unsigned char key = convertToDoomKey(keyCode);
 
   unsigned short keyData = (pressed << 8) | key;
@@ -132,73 +165,21 @@ static void addKeyToQueue(int pressed, unsigned int keyCode){
   s_KeyQueueWriteIndex++;
   s_KeyQueueWriteIndex %= KEYQUEUE_SIZE;
 }
-static void handleKeyInput(){
-  SDL_Event e;
-  while (SDL_PollEvent(&e)){
-    if (e.type == SDL_QUIT){
-      puts("Quit requested");
-      atexit(SDL_Quit);
-      exit(1);
-    }
-    if (e.type == SDL_KEYDOWN) {
-      //KeySym sym = XKeycodeToKeysym(s_Display, e.xkey.keycode, 0);
-      //printf("KeyPress:%d sym:%d\n", e.xkey.keycode, sym);
-      addKeyToQueue(1, e.key.keysym.sym);
-    } else if (e.type == SDL_KEYUP) {
-      //KeySym sym = XKeycodeToKeysym(s_Display, e.xkey.keycode, 0);
-      //printf("KeyRelease:%d sym:%d\n", e.xkey.keycode, sym);
-      addKeyToQueue(0, e.key.keysym.sym);
-    }
-  }
-}
 
-
-void DG_Init(){
-  window = SDL_CreateWindow("DOOM",
-                            SDL_WINDOWPOS_UNDEFINED,
-                            SDL_WINDOWPOS_UNDEFINED,
-                            DOOMGENERIC_RESX,
-                            DOOMGENERIC_RESY,
-                            SDL_WINDOW_SHOWN
-                            );
-
-  // Setup renderer
-  renderer =  SDL_CreateRenderer( window, -1, SDL_RENDERER_ACCELERATED);
-  // Clear winow
-  SDL_RenderClear( renderer );
-  // Render the rect to the screen
-  SDL_RenderPresent(renderer);
-
-  texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB888, SDL_TEXTUREACCESS_TARGET, DOOMGENERIC_RESX, DOOMGENERIC_RESY);
-}
-
-void DG_DrawFrame()
+extern void doomgeneric_AddKey(int pressed, unsigned int keyCode)
 {
-  SDL_UpdateTexture(texture, NULL, DG_ScreenBuffer, DOOMGENERIC_RESX*sizeof(uint32_t));
-
-  SDL_RenderClear(renderer);
-  SDL_RenderCopy(renderer, texture, NULL, NULL);
-  SDL_RenderPresent(renderer);
-
-  handleKeyInput();
+  addKeyToQueue(pressed, keyCode);
 }
 
-void DG_SleepMs(uint32_t ms)
+int DG_GetKey(int *pressed, unsigned char *doomKey)
 {
-  SDL_Delay(ms);
-}
-
-uint32_t DG_GetTicksMs()
-{
-  return SDL_GetTicks();
-}
-
-int DG_GetKey(int* pressed, unsigned char* doomKey)
-{
-  if (s_KeyQueueReadIndex == s_KeyQueueWriteIndex){
-    //key queue is empty
+  if (s_KeyQueueReadIndex == s_KeyQueueWriteIndex)
+  {
+    // key queue is empty
     return 0;
-  }else{
+  }
+  else
+  {
     unsigned short keyData = s_KeyQueue[s_KeyQueueReadIndex];
     s_KeyQueueReadIndex++;
     s_KeyQueueReadIndex %= KEYQUEUE_SIZE;
@@ -210,26 +191,4 @@ int DG_GetKey(int* pressed, unsigned char* doomKey)
   }
 
   return 0;
-}
-
-void DG_SetWindowTitle(const char * title)
-{
-  if (window != NULL){
-    SDL_SetWindowTitle(window, title);
-  }
-}
-
-EM_BOOL tick(double time, void* userData) {
-  doomgeneric_Tick();
-
-  return EM_TRUE;
-}
-
-int main(int argc, char **argv)
-{
-    doomgeneric_Create(argc, argv);
-
-    emscripten_request_animation_frame_loop(tick, 0);
-
-    return 0;
 }

@@ -152,7 +152,7 @@ void cmap_to_fb(uint8_t * out, uint8_t * in, int in_pixels)
     int i, j, k;
     struct color c;
     uint32_t pix;
-    uint16_t r, g, b;
+    uint16_t r, g, b, a;
 
     for (i = 0; i < in_pixels; i++)
     {
@@ -160,9 +160,11 @@ void cmap_to_fb(uint8_t * out, uint8_t * in, int in_pixels)
         r = (uint16_t)(c.r >> (8 - s_Fb.red.length));
         g = (uint16_t)(c.g >> (8 - s_Fb.green.length));
         b = (uint16_t)(c.b >> (8 - s_Fb.blue.length));
+        a = (uint16_t)(c.a >> (8 - s_Fb.transp.length));
         pix = r << s_Fb.red.offset;
         pix |= g << s_Fb.green.offset;
         pix |= b << s_Fb.blue.offset;
+        pix |= a << s_Fb.transp.offset;
 
         for (k = 0; k < fb_scaling; k++) {
             for (j = 0; j < s_Fb.bits_per_pixel/8; j++) {
@@ -190,9 +192,9 @@ void I_InitGraphics (void)
 	s_Fb.red.length = 8;
 	s_Fb.transp.length = 8;
 
-	s_Fb.blue.offset = 0;
-	s_Fb.green.offset = 8;
-	s_Fb.red.offset = 16;
+    s_Fb.red.offset = 0;
+    s_Fb.green.offset = 8;
+	s_Fb.blue.offset = 16;
 	s_Fb.transp.offset = 24;
 	
 
@@ -331,7 +333,7 @@ void I_SetPalette (byte* palette)
      * map to the right pixel format over here! */
 
     for (i=0; i<256; ++i ) {
-        colors[i].a = 0;
+        colors[i].a = 0xFF;
         colors[i].r = gammatable[usegamma][*palette++];
         colors[i].g = gammatable[usegamma][*palette++];
         colors[i].b = gammatable[usegamma][*palette++];
