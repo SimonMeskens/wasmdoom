@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Doom</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        background: black;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas class="emscripten" id="canvas" tabindex="-1"></canvas>
+
+    <script type="text/javascript">
+      var Module = {
+        canvas: document.getElementById("canvas"),
+        arguments: ["-iwad", "doom1.wad"],
+      };
+
+      Module.canvas.width = 640;
+      Module.canvas.height = 400;
+
+      const { min, floor } = Math;
+
+      const multiplier = floor(
+        min(
+          window.innerWidth / Module.canvas.width,
+          window.innerHeight / Module.canvas.height
+        )
+      );
+
+      Module.canvas.style.width = `${Module.canvas.width * multiplier}px`;
+      Module.canvas.style.height = `${Module.canvas.height * multiplier}px`;
+
+      window.addEventListener("resize", () => {
+        const multiplier = floor(
+          min(
+            window.innerWidth / Module.canvas.width,
+            window.innerHeight / Module.canvas.height
+          )
+        );
+
+        Module.canvas.style.width = `${Module.canvas.width * multiplier}px`;
+        Module.canvas.style.height = `${Module.canvas.height * multiplier}px`;
+      });
+    </script>
+    <script async type="text/javascript" src="doomgeneric.js"></script>
+  </body>
+</html>
