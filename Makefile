@@ -5,8 +5,8 @@ else
 endif
 
 CC=emcc  # clang, gcc or g++
-CFLAGS+=-gsource-map
-LDFLAGS+=-sASYNCIFY --preload-file doom1.wad --source-map-base ./ -sEXPORTED_FUNCTIONS=_doomgeneric_AddKey,_main
+CFLAGS+=-g -O3
+LDFLAGS+=-sASYNCIFY --preload-file doom1.wad -sEXPORTED_FUNCTIONS=_doomgeneric_AddKey,_main
 LIBS+=-lm
 
 # subdirectory for objects
