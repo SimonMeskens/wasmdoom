@@ -245,6 +245,8 @@ void I_BindVariables(void)
 
 void I_Quit (void)
 {
+    exit(0);
+    
     atexit_listentry_t *entry;
 
     // Run through all exit functions
@@ -262,6 +264,7 @@ void I_Quit (void)
 
     exit(0);
 #endif
+    
 }
 
 #if !defined(_WIN32) && !defined(__MACOSX__)
@@ -460,9 +463,7 @@ void I_Error (char *error, ...)
 
     exit(-1);
 #else
-    while (true)
-    {
-    }
+    exit(-1);
 #endif
 }
 

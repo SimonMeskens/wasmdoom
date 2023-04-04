@@ -335,7 +335,8 @@ void I_GetEvent(void)
                 */
 }
 
-void I_InitInput(void)
+int I_InitInput(void)
 {
+    return 0;
 }
 
